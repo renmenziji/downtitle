@@ -8,6 +8,7 @@
 #include <QQueue>
 #include <QTime>
 #include <QUrl>
+#include <QTextEdit>
 #include <QNetworkAccessManager>
 
 #include "textprogressbar.h"
@@ -41,6 +42,7 @@ private:
     TextProgressBar progressBar;
 	QString _filename;
 
+	QTextEdit* _pTextEdit;
     int downloadedCount;
     int totalCount;
 };

@@ -11,7 +11,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{9796896C-4584-389C-B816-007A3DEFE58F}</ProjectGuid>
+    <ProjectGuid>{A1F30BB3-0FAC-30DA-996D-8ABAA675FD63}</ProjectGuid>
     <RootNamespace>downloadmanager</RootNamespace>
     <Keyword>Qt4VSv1.0</Keyword>
   </PropertyGroup>
@@ -56,7 +56,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore;release;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtNetwork;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;C:\qt\qt5.5.0\5.5\msvc2013_64\include;C:\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork;C:\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore;release;C:\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-Zc:strictStrings -w34100 -w34189 -w44996 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -74,7 +74,7 @@
       <WarningLevel>Level3</WarningLevel>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Widgets.lib;Qt5Network.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;Qt5Network.lib;Qt5Widgets.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;C:\qt\qt5.5.0\5.5\msvc2013_64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -97,7 +97,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>.;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore;debug;..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtNetwork;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.;C:\qt\qt5.5.0\5.5\msvc2013_64\include;C:\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork;C:\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore;debug;C:\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalOptions>-w34100 -w34189 -w44996 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
@@ -115,7 +115,7 @@
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;Qt5Widgetsd.lib;Qt5Networkd.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;Qt5Networkd.lib;Qt5Widgetsd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;C:\qt\qt5.5.0\5.5\msvc2013_64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -152,13 +152,13 @@
 if errorlevel 1 goto VCEnd
 if errorlevel 1 goto VCEnd
 endlocal
-"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_CONSOLE -DUNICODE -DWIN32 -DWIN64 -DQT_NO_DEBUG -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WIDGETS_LIB  "-I." "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include" "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork" "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore" "-I.\release" "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtNetwork"</Command>
+"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_CONSOLE -DUNICODE -DWIN32 -DWIN64 -DQT_NO_DEBUG -DQT_NETWORK_LIB -DQT_CORE_LIB -DNDEBUG -DQT_WIDGETS_LIB  "-I." "-IC:\qt\qt5.5.0\5.5\msvc2013_64\include" "-IC:\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork" "-IC:\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore" "-I.\release" "-IC:\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013" "-I$(QTDIR)\include\QtNetwork" "-I$(QTDIR)\include\QtWidgets"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Moc%27ing downloadmanager.h...</Message>
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">setlocal
 if errorlevel 1 goto VCEnd
 if errorlevel 1 goto VCEnd
 endlocal
-"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_CONSOLE -DUNICODE -DWIN32 -DWIN64 -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_WIDGETS_LIB  "-I." "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include" "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork" "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore" "-I.\debug" "-I.\..\..\..\..\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013" "-I$(QTDIR)\include\QtWidgets" "-I$(QTDIR)\include\QtNetwork"</Command>
+"$(QTDIR)\bin\moc.exe"  "%(FullPath)" -o ".\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp"  -D_CONSOLE -DUNICODE -DWIN32 -DWIN64 -DQT_NETWORK_LIB -DQT_CORE_LIB -DQT_WIDGETS_LIB  "-I." "-IC:\qt\qt5.5.0\5.5\msvc2013_64\include" "-IC:\qt\qt5.5.0\5.5\msvc2013_64\include\QtNetwork" "-IC:\qt\qt5.5.0\5.5\msvc2013_64\include\QtCore" "-I.\debug" "-IC:\qt\qt5.5.0\5.5\msvc2013_64\mkspecs\win32-msvc2013" "-I$(QTDIR)\include\QtNetwork" "-I$(QTDIR)\include\QtWidgets"</Command>
       <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Moc%27ing downloadmanager.h...</Message>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\GeneratedFiles\$(ConfigurationName)\moc_%(Filename).cpp</Outputs>

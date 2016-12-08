@@ -139,6 +139,7 @@ bool CHtml::parse(QString strText)
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent), downloadedCount(0), totalCount(0)
 {
+	_pTextEdit = new QTextEdit();
 }
 
 void DownloadManager::append(const QStringList &urlList)
@@ -167,15 +168,15 @@ QString saveFileName(const QUrl &url)
     if (basename.isEmpty())
         basename = "download";
 
-    if (QFile::exists(basename)) {
-        // already exists, don't overwrite
-        int i = 0;
-        basename += '.';
-        while (QFile::exists(basename + QString::number(i)))
-            ++i;
+    //if (QFile::exists(basename)) {
+    //    // already exists, don't overwrite
+    //    int i = 0;
+    //    basename += '.';
+    //    while (QFile::exists(basename + QString::number(i)))
+    //        ++i;
 
-        basename += QString::number(i);
-    }
+    //    basename += QString::number(i);
+    //}
 
     return basename;
 }
@@ -247,9 +248,61 @@ void parseText(QString strFilename, QString url)
 	{
 		return;
 	}
-	QTextStream ts(&file0);
-	//QString str = file0.readAll();
-	QString str = ts.readAll();
+	//QTextStream ts(&file0);
+	//QString str = ts.readAll();
+	QByteArray strread = file0.readAll();
+
+
+	QTextCodec* tc;
+	bool b;
+	int i;
+	for ( i = 0; i < 1; i++)
+	{
+
+		tc = QTextCodec::codecForName("Big5");
+		b = tc->canEncode(strread);
+		if (b)
+		{
+			break;
+		}
+		tc = QTextCodec::codecForName("GB18030");
+		b = tc->canEncode(strread);
+		if (b)
+		{
+			break;
+		}
+		tc = QTextCodec::codecForName("UTF-8");
+		b = tc->canEncode(strread);
+		if (b)
+		{
+			break;
+		}
+		tc = QTextCodec::codecForName("UTF-16");
+		b = tc->canEncode(strread);
+		if (b)
+		{
+			break;
+		}
+		tc = QTextCodec::codecForName("UTF-32");
+		b = tc->canEncode(strread);
+		if (b)
+		{
+			break;
+		}
+		tc = NULL;
+	}
+
+	QString str;
+	if (tc)
+	{
+		str = tc->toUnicode(strread);
+	}
+	else
+	{
+		str = strread;
+	}
+
+
 	QUrl url0(url);
 	CHtml html0;
 	html0.parse(str);
@@ -275,7 +328,7 @@ void parseText(QString strFilename, QString url)
 
 
 		QString strText;
-	for (int i = 0; i < html0.m_lstRoots.count(); i++)
+	for ( i = 0; i < html0.m_lstRoots.count(); i++)
 	{
 		CHtmlNode* pNode = html0.m_lstRoots[i];
 		//qDebug() << pNode->m_Author;

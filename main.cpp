@@ -49,10 +49,10 @@ int main(int argc, char **argv)
 
 	
 	QStringList lstMe;
-	lstMe << "http://www.1080.net/forum-2-1.html";
-	lstMe << "http://www.1080.net/forum-2-2.html";
+	//lstMe << "http://www.1080.net/forum-2-1.html";
+	//lstMe << "http://www.1080.net/forum-2-2.html";
 
-	////lstMe << "http://finance.sina.com.cn/";
+	//////lstMe << "http://finance.sina.com.cn/";
 	lstMe << "http://bbs.a9vg.com/forum-261-1.html";
 	lstMe << "http://bbs.popiano.org/forum-133-1.html";
 
