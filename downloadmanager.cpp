@@ -139,7 +139,6 @@ bool CHtml::parse(QString strText)
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent), downloadedCount(0), totalCount(0)
 {
-	_pTextEdit = new QTextEdit();
 }
 
 void DownloadManager::append(const QStringList &urlList)
