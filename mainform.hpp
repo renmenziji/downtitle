@@ -25,5 +25,7 @@ public:
 	void slotQuit();
 	void slotOutByCount();
 
-
+protected:
+	void timerEvent(QTimerEvent *event);
+	int m_nTimerId;
 };

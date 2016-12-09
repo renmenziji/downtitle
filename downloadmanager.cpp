@@ -14,6 +14,7 @@
 #include <QJsonObject>
 #include <QTimer>
 #include <QStack>
+#include <QDesktopServices>
 #include "mydbio.h"
 QUuid GetUniqueGuid();
 
@@ -186,6 +187,7 @@ bool CHtmlNode::_parse()
 		return true;
 	}
 	int i;
+	m_refCount = -1;
 	QStringList lsthref = _text.split("<a href=\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
 	//lsthref.removeFirst();
 
@@ -196,6 +198,10 @@ bool CHtmlNode::_parse()
 		if (lstText.count()>0)
 		{
 			href0.href = lstText.first();
+			if (href0.href[0] == '/')
+			{
+				href0.href.remove(0, 1);
+			}
 		}
 		else
 		{
@@ -237,6 +243,32 @@ bool CHtmlNode::_parse()
 		if (dt != QDateTime())
 		{
 			m_dateTime = dt;
+		}
+	}
+
+	if (m_refCount==-1)//没有找到回复数，可能是tianya模式
+	{
+
+		QStringList lsthref = _text.split("<td>", QString::KeepEmptyParts, Qt::CaseInsensitive);
+		//lsthref.removeFirst();
+
+		for (i = 1; i < lsthref.count(); i++)
+		{
+			QStringList lstText = lsthref[i].split("</td>", QString::KeepEmptyParts, Qt::CaseInsensitive);
+			if (lstText.count()>0)
+			{
+				QString str = lstText.first();
+				bool bok;
+				int a = str.toInt(&bok);
+				if (bok)
+				{
+					m_refCount = a;
+				}
+			}
+			else
+			{
+				continue;
+			}
 		}
 	}
 
@@ -309,30 +341,84 @@ bool CHtml::Serialize(bool bSave)
 }
 bool CHtml::parse(QString strText)
 {
-	int i;
-
-	QStringList lstTBody = strText.split("<tbody", QString::KeepEmptyParts, Qt::CaseInsensitive);
-	lstTBody.removeFirst();
-	for (i = 0; i < lstTBody.count(); i++)
+	int type = 0;
+	int i,j;
+	if (m_host.contains("tianya"))
 	{
-		QStringList lstText = lstTBody[i].split("/tbody>", QString::KeepEmptyParts, Qt::CaseInsensitive);
-		if (lstText.count()>0)
+		type = 1;
+	}
+
+	if (type== 1)//tbody中含有 class="bg" 的才有
+	{
+
+		QStringList lstTBody = strText.split("<tbody", QString::KeepEmptyParts, Qt::CaseInsensitive);
+		lstTBody.removeFirst();
+		for (i = 0; i < lstTBody.count(); i++)
 		{
-			CHtmlNode* pNode = new CHtmlNode(lstText.first());
-			if (pNode->m_Title.isEmpty())
+			QStringList lstTextBG = lstTBody[i].split("/tbody>", QString::KeepEmptyParts, Qt::CaseInsensitive);
+			if (lstTextBG.count()>0)//这里后剩下 tr
 			{
-				delete pNode;
-				continue;
+				QStringList lstTextTr = lstTextBG.first().split("<tr", QString::KeepEmptyParts, Qt::CaseInsensitive);
+				lstTextTr.removeFirst();
+				for (j = 0; j < lstTextTr.count(); j++)
+				{
+
+					QStringList lstText = lstTextTr[j].split("/tr>", QString::KeepEmptyParts, Qt::CaseInsensitive);
+					if (lstText.count() > 0)//这里后剩下 tr
+					{
+						CHtmlNode* pNode = new CHtmlNode(lstText.first());
+						if (pNode->m_Title.isEmpty())
+						{
+							delete pNode;
+							continue;
+						}
+						CHtmlNode* pFind = GetHtmlNode(pNode->m_Href);
+						if (pFind)
+						{
+							pFind->m_bModified = true;
+							pFind->m_Title = pNode->m_Title;
+							pFind->m_Author = pNode->m_Author;
+							pFind->m_dateTime = pNode->m_dateTime;
+							pFind->m_refCount = pNode->m_refCount;
+							pFind->m_lsthref = pNode->m_lsthref;
+
+							delete pNode;
+						}
+						else
+						{
+							m_lstChildren.append(pNode);
+						}
+					}
+				}
 			}
-			CHtmlNode* pFind = GetHtmlNode(pNode->m_Href);
-			if (pFind)
+		}
+
+	}
+	else
+	{
+		QStringList lstTBody = strText.split("<tbody", QString::KeepEmptyParts, Qt::CaseInsensitive);
+		lstTBody.removeFirst();
+		for (i = 0; i < lstTBody.count(); i++)
+		{
+			QStringList lstText = lstTBody[i].split("/tbody>", QString::KeepEmptyParts, Qt::CaseInsensitive);
+			if (lstText.count()>0)
 			{
-				pFind->m_lsthref = pNode->m_lsthref;
-				delete pNode;
-			}
-			else
-			{
-				m_lstChildren.append(pNode);
+				CHtmlNode* pNode = new CHtmlNode(lstText.first());
+				if (pNode->m_Title.isEmpty())
+				{
+					delete pNode;
+					continue;
+				}
+				CHtmlNode* pFind = GetHtmlNode(pNode->m_Href);
+				if (pFind)
+				{
+					pFind->m_lsthref = pNode->m_lsthref;
+					delete pNode;
+				}
+				else
+				{
+					m_lstChildren.append(pNode);
+				}
 			}
 		}
 	}
@@ -511,7 +597,7 @@ bool lstrefLess(CHtmlNode* p1, CHtmlNode* p2)
 	return p1->m_refCount > p2->m_refCount;
 }
 
-void CHtmlProject::outputHtmlAll(int order)//order 0前后顺序 1refcount 2 all refcount
+void CHtmlProject::outputHtmlAll(int order, int minRefCount)//order 0前后顺序 1refcount 2 all refcount
 {
 	int j;
 	CHtmlProject* pProject = GetProject();
@@ -560,6 +646,10 @@ void CHtmlProject::outputHtmlAll(int order)//order 0前后顺序 1refcount 2 all ref
 			for (i = 0; i < lst.count(); i++)
 			{
 				CHtmlNode* pNode = lst[i];
+				if (pNode->m_refCount<minRefCount)
+				{
+					continue;
+				}
 				strTTTTT += pNode->m_Title + "\n";
 				//qDebug() << pNode->m_Author;
 				//qDebug() << pNode->m_refCount;
@@ -585,14 +675,19 @@ void CHtmlProject::outputHtmlAll(int order)//order 0前后顺序 1refcount 2 all ref
 		fileOut.close();
 	}
 
-	{
+	QDesktopServices::openUrl(QUrl(strOut));
 
-		QFile fileOut("test.txt");
+	//{
 
-		fileOut.open(QFile::WriteOnly);
-		fileOut.write(strTTTTT.toUtf8());
-		fileOut.close();
-	}
+	//	QFile fileOut("test.txt");
+
+	//	fileOut.open(QFile::WriteOnly);
+	//	fileOut.write(strTTTTT.toUtf8());
+	//	fileOut.close();
+	//}
+
+
+
 }
 
 CHtml* CHtmlProject::GetorCreateHtml(QString url)
@@ -769,7 +864,7 @@ void parseText(QString strFilename, QString url)
 
 
 	QTextCodec* tc=NULL;
-	int i;
+//	int i;
 
 	QStringList lstCodec = str.split("charset");
 	if (lstCodec.count()>1)//取后者
@@ -809,9 +904,9 @@ void parseText(QString strFilename, QString url)
 	}
 	CHtml *pHtml = GetProject()->GetorCreateHtml(urlOri);
 
-	pHtml->parse(str);
 	pHtml->m_href = urlOri;
 	pHtml->m_host = "http://"+url0.host()+"/";
+	pHtml->parse(str);
 	GetProject()->AddChild(pHtml);
 	GetProject()->Save();
 		//for (int i = 0; i < pHtml->m_lstChildren.count(); i++)

@@ -13,6 +13,7 @@ CMainForm::CMainForm(QWidget * parent) : QWidget(parent) {
 	QObject::connect(ui.pushButtonRun, SIGNAL(clicked()), this, SLOT(slotRun()));
 	QObject::connect(ui.pushButtonQuit, SIGNAL(clicked()), this, SLOT(slotQuit()));
 	QObject::connect(ui.pushButtonOutByCount, SIGNAL(clicked()), this, SLOT(slotOutByCount()));
+	m_nTimerId = startTimer(3600000);
 }
 
 CMainForm::~CMainForm() {
@@ -39,9 +40,13 @@ void  CMainForm::load()
 	{
 		return ;
 	}
+
+	ui.lineEditMaxCount->setText(QString::number(firstLevel["lineEditMaxCount"].toInt()));
+	ui.lineEditMinCount->setText(QString::number(firstLevel["lineEditMinCount"].toInt()));
+
 	QJsonArray ja = firstLevel["ja"].toArray();
 	ui.tableWidget->setRowCount(0);
-	ui.tableWidget->setRowCount(200);
+	ui.tableWidget->setRowCount(1000);
 	for (int i = 0; i < ja.count(); i++)
 	{
 		QJsonObject ob = ja[i].toObject();
@@ -60,6 +65,8 @@ void  CMainForm::save()
 	
 	QJsonObject firstLevel;
 	firstLevel["jsontype"] = "CMainForm";
+	firstLevel["lineEditMaxCount"] = ui.lineEditMaxCount->text().toInt();
+	firstLevel["lineEditMinCount"] = ui.lineEditMinCount->text().toInt();
 	QJsonArray ja;
 	int i;
 	MyHrefCount h0;
@@ -106,6 +113,7 @@ void CMainForm::slotRun()
 	//QStringList lstHref;
 	//QList<int> maxCount;
 
+	int uiMaxCount = ui.lineEditMaxCount->text().toInt();
 	int i;
 	MyHrefCount h0;
 	for ( i = 0; i < ui.tableWidget->rowCount(); i++)
@@ -117,7 +125,11 @@ void CMainForm::slotRun()
 			{
 				continue;
 			}
-			if (ui.tableWidget->item(i,1))
+			if (uiMaxCount>=1)
+			{
+				h0.count = uiMaxCount;
+			}
+			else if (ui.tableWidget->item(i,1))
 			{
 				h0.count=(qMax(ui.tableWidget->item(i, 1)->text().toInt(),1));
 			}
@@ -131,6 +143,14 @@ void CMainForm::slotRun()
 
 	//m_runThread->m_lstData = lstData;
 	//m_runThread->start();
+
+	if (ui.lineEditText->text().isEmpty()==false)
+	{
+		lstData.clear();
+		h0.href = ui.lineEditText->text();
+		h0.count = uiMaxCount;
+		lstData.append(h0);
+	}
 
 	GetProject()->startDown(lstData);
 	//DownloadManager manager;
@@ -146,5 +166,11 @@ void CMainForm::slotQuit()
 }
 void CMainForm::slotOutByCount()
 {
-	GetProject()->outputHtmlAll(2);
+	GetProject()->outputHtmlAll(2,ui.lineEditMinCount->text().toInt());
+}
+
+void CMainForm::timerEvent(QTimerEvent * event)
+{
+	qDebug("timer event, id %d", event->timerId());
+	slotRun();
 }

@@ -85,7 +85,7 @@ public:
 
 	void startDown(QList<MyHrefCount> lstData);
 
-	void outputHtmlAll(int order);//order 0前后顺序 1refcount 2 all refcount
+	void outputHtmlAll(int order,int minRefCount = -1);//order 0前后顺序 1refcount 2 all refcount
 
 	CHtml* GetorCreateHtml(QString url);
 
