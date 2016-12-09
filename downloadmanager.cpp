@@ -249,51 +249,33 @@ void parseText(QString strFilename, QString url)
 	}
 	//QTextStream ts(&file0);
 	//QString str = ts.readAll();
+	QString str;
 	QByteArray strread = file0.readAll();
+	str = strread;
 
 
-	QTextCodec* tc;
+	QTextCodec* tc=NULL;
 	bool b;
 	int i;
-	for ( i = 0; i < 1; i++)
+
+	QStringList lstCodec = str.split("charset");
+	if (lstCodec.count()>1)//È¡ºóÕß
 	{
-
-		tc = QTextCodec::codecForName("Big5");
-		b = tc->canEncode(strread);
-		if (b)
+		str = lstCodec[1];
+		str = str.left(20);
+		if (str.contains("gbk"))
 		{
-			break;
+			tc = QTextCodec::codecForName("gbk");
 		}
-		tc = QTextCodec::codecForName("GB18030");
-		b = tc->canEncode(strread);
-		if (b)
+		else if (str.contains("utf-8"))
 		{
-			break;
+			tc = QTextCodec::codecForName("utf-8");
 		}
-		tc = QTextCodec::codecForName("UTF-8");
-		b = tc->canEncode(strread);
-		if (b)
-		{
-			break;
-		}
-		tc = QTextCodec::codecForName("UTF-16");
-		b = tc->canEncode(strread);
-		if (b)
-		{
-			break;
-		}
-		tc = QTextCodec::codecForName("UTF-32");
-		b = tc->canEncode(strread);
-		if (b)
-		{
-			break;
-		}
-		tc = NULL;
 	}
-
-	QString str;
+	
 	if (tc)
 	{
+		//str = tc->fromUnicode(strread);
 		str = tc->toUnicode(strread);
 	}
 	else
@@ -357,6 +339,7 @@ void parseText(QString strFilename, QString url)
 		QFile fileOut("all.html");
 
 		fileOut.open(QFile::ReadWrite);
+		fileOut.seek(fileOut.size());
 		QString strLine = url+"-------------------------------------<br>";
 		fileOut.write(strLine.toUtf8());
 		fileOut.write(strText.toUtf8());
