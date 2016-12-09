@@ -12,34 +12,218 @@
 #include <QTextCodec>
 //#include <QDomDocument>
 #include <QJsonObject>
+#include <QStack>
+#include "mydbio.h"
+QUuid GetUniqueGuid();
 
+
+class CBaseObject
+{
+public :
+	CBaseObject(QUuid uuid);
+	~CBaseObject(  );
+	
+	void AddChild(CBaseObject* p);
+	QList<CBaseObject*> m_lstChildren;
+	QUuid m_parentID;
+	QUuid m_objID;
+	static QMap<QUuid, CBaseObject*> g_mapAllObject;
+
+	virtual bool Serialize(bool bSave);
+	CBaseObject* GetObject(QUuid id);
+	bool m_bModified;
+
+	virtual QString GetObjectType() { return "object"; }
+};
+
+QMap<QUuid, CBaseObject*> CBaseObject::g_mapAllObject;
+
+CBaseObject::CBaseObject( QUuid uuid)
+	:m_objID(uuid)
+{
+	if (m_objID == 0)
+	{
+		m_objID = GetUniqueGuid();
+	}
+	if (m_objID != QUuid("1"))
+	{	
+		g_mapAllObject[m_objID] = this;
+	}
+	m_bModified = true;
+}
+
+CBaseObject::~CBaseObject()
+{
+	if (g_mapAllObject.contains(m_objID))
+	{
+		g_mapAllObject.remove(m_objID);
+	}
+}
+
+bool CBaseObject::Serialize(bool bSave)
+{
+
+	QString strTable = "object";
+
+	// save
+	if (bSave)
+	{
+		if (!m_bModified)
+			return false;
+
+		m_bModified = false;
+
+		QStringList strFieldList;
+		strFieldList << "ID";
+		strFieldList << "Type";
+		strFieldList << "childrenID";
+		QList<QVariant> vtList;
+		
+		vtList.append(m_objID.toString());
+		vtList.append(GetObjectType());
+
+		QStringList strChildList;
+		for (int i = 0; i<m_lstChildren.size(); ++i)
+			strChildList.append(m_lstChildren.at(i)->m_objID.toString());
+		QString strChildren = strChildList.join("\r");
+		vtList.append(strChildren);
+
+		return CMyDBIO::GetDBIO()->UpdateInsert(strTable, strFieldList, vtList, m_objID.toString());
+	}
+	else
+	{
+		m_bModified = false;
+
+		return true;
+	}
+}
+
+void CBaseObject::AddChild(CBaseObject* p)
+{
+	p->m_parentID = m_objID;
+	if (m_lstChildren.contains(p)==false)
+	{
+		m_lstChildren.append(p);
+	}
+}
+
+CBaseObject* CBaseObject::GetObject(QUuid id)
+{
+	if (g_mapAllObject.contains(id))
+	{
+		return g_mapAllObject[id];
+	}
+	return NULL;
+}
 
 struct CHtmlhref
 {
 	QString name;
 	QString href;
 };
-class CHtmlNode
+class CHtmlNode:public CBaseObject
 {
 public:
-	CHtmlNode(QString t) { _text = t; m_refCount = 0; _parse(); };
+	CHtmlNode(QString t, QUuid uuid =0);
 
 	QString m_Title;//like tr td...
-	QString getAttribute(QString);
-
 	QString m_Author;
+	QString m_Href;//like tr td...
 	QDateTime m_dateTime;
 	int m_refCount;
 	QList<CHtmlhref> m_lsthref;
 	//QList<CHtmlNode*> m_lstChildren;	
+
+	bool Serialize(bool bSave);
+	virtual QString GetObjectType() { return "CHtmlNode"; }
 private:
 	QString _text;
 	bool _parse();
 	QJsonObject _jo;
 };
 
+
+CHtmlNode::CHtmlNode(QString t, QUuid uuid ):CBaseObject(uuid)
+{
+	_text = t; m_refCount = 0; GetUniqueGuid(); _parse(); 
+}
+
+
+bool CHtmlNode::Serialize(bool bSave)
+{
+	if (!CBaseObject::Serialize(bSave))
+		return false;
+
+	QString strTable = "htmlnode";
+
+	QStringList strFieldList;
+	strFieldList << "ID";
+	strFieldList << "Title";
+	strFieldList << "m_Href";
+	strFieldList << "Author";
+	strFieldList << "DateTime";
+	strFieldList << "NameHref";
+	// save
+	if (bSave)
+	{
+
+		QList<QVariant> vtList;
+
+		vtList.append(m_objID.toString());
+		vtList.append(m_Title);
+		vtList.append(m_Href);
+		vtList.append(m_Author);
+		vtList.append(m_dateTime.toString());
+
+
+		QStringList listPair;
+		for (int i = 0; i < m_lsthref.size(); ++i)
+		{
+			listPair.append(m_lsthref[i].name);
+			listPair.append(m_lsthref[i].href);
+		}
+		vtList.append(listPair.join('\r'));
+
+
+		return CMyDBIO::GetDBIO()->UpdateInsert(strTable, strFieldList, vtList, m_objID.toString());
+	}
+	else
+	{
+		QSqlQuery query = CMyDBIO::GetDBIO()->Select(strTable, strFieldList, m_objID.toString());
+
+		if (query.first())
+		{
+			int nIndex = -1;
+
+			m_Title = query.value(++nIndex).toString();
+			m_Href = query.value(++nIndex).toString();
+			m_Author = query.value(++nIndex).toString();
+			m_dateTime.fromString( query.value(++nIndex).toString());
+
+			QString listPair = query.value(++nIndex).toString();
+			QStringList strListPair = listPair.split("\r");
+			m_lsthref.clear();
+			for (int i = 0; i < strListPair.size() / 2; ++i)
+			{
+				CHtmlhref href0;
+				href0.name= strListPair[2 * i].toDouble();
+				href0.href= strListPair[2 * i + 1].toDouble();
+
+				m_lsthref.append(href0);
+			}
+		}
+
+		return true;
+	}
+}
+
+
 bool CHtmlNode::_parse()
 {
+	if (_text.isEmpty())
+	{
+		return true;
+	}
 	int i;
 	QStringList lsthref = _text.split("<a href=\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
 	//lsthref.removeFirst();
@@ -64,7 +248,7 @@ bool CHtmlNode::_parse()
 			{
 				QString check0 = lstText.first().simplified();
 
-				if (check0.isEmpty() || check0 == " ")
+				if (check0.size()<2 )
 				{
 					continue;
 				}
@@ -94,28 +278,81 @@ bool CHtmlNode::_parse()
 			m_dateTime = dt;
 		}
 	}
+
+	for (i = 0; i < m_lsthref.count(); i++)
+	{
+		if (m_Title.size()<m_lsthref[i].name.size())
+		{
+			m_Title = m_lsthref[i].name;
+		}
+	}
 	return true;
 }
 
-class CHtml
+class CHtml :public CBaseObject
 {
 public:
-	CHtml() {};
+	CHtml(QUuid uuid=0);
 
+	QString m_href;
 	QString m_host;
-	QList<CHtmlNode*> m_lstRoots;
 
+	virtual QString GetObjectType() { return "CHtml"; }
 	bool parse(QString strText);
+	bool Serialize(bool bSave);
 };
 
+CHtml::CHtml(QUuid uuid):CBaseObject(uuid)
+{
+
+}
+
+bool CHtml::Serialize(bool bSave)
+{
+	if (!CBaseObject::Serialize(bSave))
+		return false;
+
+	QString strTable = "html";
+
+	QStringList strFieldList;
+	strFieldList << "ID";
+	strFieldList << "Href";
+	strFieldList << "Host";
+	// save
+	if (bSave)
+	{
+
+		QList<QVariant> vtList;
+
+		vtList.append(m_objID.toString());
+		vtList.append(m_href);
+		vtList.append(m_host);
+
+		return CMyDBIO::GetDBIO()->UpdateInsert(strTable, strFieldList, vtList, m_objID.toString());
+	}
+	else
+	{
+		QSqlQuery query = CMyDBIO::GetDBIO()->Select(strTable, strFieldList, m_objID.toString());
+
+		if (query.first())
+		{
+			int nIndex = -1;
+
+			m_href = query.value(++nIndex).toString();
+			m_host = query.value(++nIndex).toString();
+		}
+
+		return true;
+	}
+}
 bool CHtml::parse(QString strText)
 {
 	int i;
-	for (i = 0; i < m_lstRoots.count(); i++)
+	for (i = 0; i < m_lstChildren.count(); i++)
 	{
-		delete m_lstRoots[i];
+		delete m_lstChildren[i];
 	}
-	m_lstRoots.clear();
+	m_lstChildren.clear();
 
 	QStringList lstTBody = strText.split("<tbody", QString::KeepEmptyParts, Qt::CaseInsensitive);
 	lstTBody.removeFirst();
@@ -125,7 +362,7 @@ bool CHtml::parse(QString strText)
 		if (lstText.count()>0)
 		{
 			CHtmlNode* pNode = new CHtmlNode(lstText.first());
-			m_lstRoots.append(pNode);
+			m_lstChildren.append(pNode);
 		}
 	}
 	return true;
@@ -133,8 +370,169 @@ bool CHtml::parse(QString strText)
 
 
 
+class CHtmlProject :public CBaseObject
+{
+public:
+	CHtmlProject(QUuid uuid = 0);
+	bool Load();
+	bool Save();
+	
+	CHtml* GetorCreateHtml(QString url);
+
+	virtual QString GetObjectType() { return "CHtmlProject"; }
+	bool Serialize(bool bSave);
+
+	static CHtmlProject* ____p;
+};
+
+void RecreateProject()
+{
+	delete  CHtmlProject::____p;
+	CHtmlProject::____p = NULL;
+}
+CHtmlProject* GetProject()
+{
+	if (CHtmlProject::____p == NULL)
+	{
+		CHtmlProject::____p = new CHtmlProject();
+		CHtmlProject::____p->Load();
+	}
+	return CHtmlProject::____p;
+}
+
+CHtmlProject* CHtmlProject::____p =NULL;
+CHtmlProject::CHtmlProject(QUuid uuid) :CBaseObject(uuid)
+{
+	CMyDBIO::GetDBIO();
+}
+
+bool CHtmlProject::Serialize(bool bSave)
+{
+	// base object
+	if (!CBaseObject::Serialize(bSave))
+		return false;
+
+	QString strTable = "htmlproject";
+
+	// save
+	if (bSave)
+	{
+		QStringList strFieldList;
+		strFieldList << "ID";
+
+		QList<QVariant> vtList;
+
+		vtList.append(m_objID.toString());
+
+		return CMyDBIO::GetDBIO()->UpdateInsert(strTable, strFieldList, vtList, m_objID.toString());
+	}
+	else
+	{
+		return true;
+	}
+}
+bool CHtmlProject::Load()
+{
 
 
+
+	// load project
+	QString projectID = CMyDBIO::GetDBIO()->GetProjectID();
+	if (projectID.isEmpty())
+	{
+		return false;
+	}
+	CMyDBIO::GetDBIO()->Transaction();
+	this->m_objID = (projectID);
+
+	
+	CBaseObject::g_mapAllObject.clear();
+	this->Serialize(false);
+	CBaseObject::g_mapAllObject.insert(this->m_objID, this);
+
+	
+	// load the rest
+	QStack<CBaseObject*> stack;
+	stack.push(this);
+
+	while (!stack.empty())
+	{
+		CBaseObject* pParentObj = stack.pop();
+
+		QStringList childrenIDs = CMyDBIO::GetDBIO()->GetChildrenIDs(pParentObj->m_objID.toString());
+
+		for (int i = 0; i<childrenIDs.size(); ++i)
+		{
+			QString eObjType = CMyDBIO::GetDBIO()->GetObjectTypeFromID(childrenIDs.at(i));
+
+			CBaseObject* pObj = NULL;
+			if (eObjType == "CHtmlNode")
+			{
+				pObj = new CHtmlNode("", QUuid("1"));
+			}
+			else if (eObjType == "CHtml")
+			{
+				pObj = new CHtml(QUuid("1"));
+
+			}
+
+			if (!pObj)
+				continue;
+
+			pObj->m_objID = (childrenIDs.at(i));
+
+			pObj->Serialize(false);
+
+			pParentObj->AddChild(pObj);
+
+			stack.push(pObj);
+		}
+	}
+
+	CMyDBIO::GetDBIO()->Commit();
+
+	return true;
+}
+bool CHtmlProject::Save()
+{
+	CMyDBIO::GetDBIO()->Transaction();
+
+	QStack<CBaseObject*> stack;
+	stack.push(this);
+
+	while (!stack.empty())
+	{
+		CBaseObject* pObj = stack.pop();
+
+		pObj->Serialize(true);
+		
+		QList<CBaseObject*> listChildren = pObj->m_lstChildren;
+
+		for (int i = listChildren.size() - 1; i >= 0; --i)
+		{
+			stack.push(listChildren.at(i));
+		}
+	}
+
+
+	CMyDBIO::GetDBIO()->Commit();
+	return true;
+}
+
+CHtml* CHtmlProject::GetorCreateHtml(QString url)
+{
+	for (int i = 0; i < m_lstChildren.count(); i++)
+	{
+		CHtml* p = dynamic_cast<CHtml*>(m_lstChildren[i]);
+		if (p && p->m_href == url)
+		{
+			return p;
+		}
+	}
+	CHtml* p = new CHtml();
+	AddChild(p);
+	return p;
+}
 
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent), downloadedCount(0), totalCount(0)
@@ -255,7 +653,6 @@ void parseText(QString strFilename, QString url)
 
 
 	QTextCodec* tc=NULL;
-	bool b;
 	int i;
 
 	QStringList lstCodec = str.split("charset");
@@ -285,12 +682,16 @@ void parseText(QString strFilename, QString url)
 
 
 	QUrl url0(url);
-	CHtml html0;
-	html0.parse(str);
-	html0.m_host = "http://"+url0.host()+"/";
-		//for (int i = 0; i < html0.m_lstRoots.count(); i++)
+	CHtml *pHtml = GetProject()->GetorCreateHtml(url);
+
+	pHtml->parse(str);
+	pHtml->m_href = url;
+	pHtml->m_host = "http://"+url0.host()+"/";
+	GetProject()->AddChild(pHtml);
+	GetProject()->Save();
+		//for (int i = 0; i < pHtml->m_lstChildren.count(); i++)
 		//{
-		//	CHtmlNode* pNode = html0.m_lstRoots[i];
+		//	CHtmlNode* pNode = pHtml->m_lstChildren[i];
 		//	qDebug() << ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>";
 
 		//	qDebug() << pNode->m_Author;
@@ -308,17 +709,17 @@ void parseText(QString strFilename, QString url)
 
 
 
-		QString strText;
-	for ( i = 0; i < html0.m_lstRoots.count(); i++)
+	QString strText;
+	for ( i = 0; i < pHtml->m_lstChildren.count(); i++)
 	{
-		CHtmlNode* pNode = html0.m_lstRoots[i];
+		CHtmlNode* pNode = (CHtmlNode*)pHtml->m_lstChildren[i];
 		//qDebug() << pNode->m_Author;
 		//qDebug() << pNode->m_refCount;
 		//qDebug() << pNode->m_dateTime.toString();
 		strText += QString::number(pNode->m_refCount);
 		for (int j = 0; j < pNode->m_lsthref.count(); j++)
 		{
-			strText += "<a href=\"" + html0.m_host + pNode->m_lsthref[j].href + "\"> "
+			strText += "<a href=\"" + pHtml->m_host + pNode->m_lsthref[j].href + "\"> "
 				+ pNode->m_lsthref[j].name
 				+ " </a>";
 
