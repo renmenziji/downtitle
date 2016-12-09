@@ -12,29 +12,11 @@
 #include <QTextCodec>
 //#include <QDomDocument>
 #include <QJsonObject>
+#include <QTimer>
 #include <QStack>
 #include "mydbio.h"
 QUuid GetUniqueGuid();
 
-
-class CBaseObject
-{
-public :
-	CBaseObject(QUuid uuid);
-	~CBaseObject(  );
-	
-	void AddChild(CBaseObject* p);
-	QList<CBaseObject*> m_lstChildren;
-	QUuid m_parentID;
-	QUuid m_objID;
-	static QMap<QUuid, CBaseObject*> g_mapAllObject;
-
-	virtual bool Serialize(bool bSave);
-	CBaseObject* GetObject(QUuid id);
-	bool m_bModified;
-
-	virtual QString GetObjectType() { return "object"; }
-};
 
 QMap<QUuid, CBaseObject*> CBaseObject::g_mapAllObject;
 
@@ -105,6 +87,7 @@ void CBaseObject::AddChild(CBaseObject* p)
 	{
 		m_lstChildren.append(p);
 	}
+	m_bModified = true;
 }
 
 CBaseObject* CBaseObject::GetObject(QUuid id)
@@ -116,31 +99,6 @@ CBaseObject* CBaseObject::GetObject(QUuid id)
 	return NULL;
 }
 
-struct CHtmlhref
-{
-	QString name;
-	QString href;
-};
-class CHtmlNode:public CBaseObject
-{
-public:
-	CHtmlNode(QString t, QUuid uuid =0);
-
-	QString m_Title;//like tr td...
-	QString m_Author;
-	QString m_Href;//like tr td...
-	QDateTime m_dateTime;
-	int m_refCount;
-	QList<CHtmlhref> m_lsthref;
-	//QList<CHtmlNode*> m_lstChildren;	
-
-	bool Serialize(bool bSave);
-	virtual QString GetObjectType() { return "CHtmlNode"; }
-private:
-	QString _text;
-	bool _parse();
-	QJsonObject _jo;
-};
 
 
 CHtmlNode::CHtmlNode(QString t, QUuid uuid ):CBaseObject(uuid)
@@ -159,8 +117,9 @@ bool CHtmlNode::Serialize(bool bSave)
 	QStringList strFieldList;
 	strFieldList << "ID";
 	strFieldList << "Title";
-	strFieldList << "m_Href";
+	strFieldList << "Href";
 	strFieldList << "Author";
+	strFieldList << "refCount";
 	strFieldList << "DateTime";
 	strFieldList << "NameHref";
 	// save
@@ -173,6 +132,7 @@ bool CHtmlNode::Serialize(bool bSave)
 		vtList.append(m_Title);
 		vtList.append(m_Href);
 		vtList.append(m_Author);
+		vtList.append(QString::number(m_refCount));
 		vtList.append(m_dateTime.toString());
 
 
@@ -193,11 +153,12 @@ bool CHtmlNode::Serialize(bool bSave)
 
 		if (query.first())
 		{
-			int nIndex = -1;
+			int nIndex = 0;
 
 			m_Title = query.value(++nIndex).toString();
 			m_Href = query.value(++nIndex).toString();
 			m_Author = query.value(++nIndex).toString();
+			m_refCount = query.value(++nIndex).toInt();
 			m_dateTime.fromString( query.value(++nIndex).toString());
 
 			QString listPair = query.value(++nIndex).toString();
@@ -206,8 +167,8 @@ bool CHtmlNode::Serialize(bool bSave)
 			for (int i = 0; i < strListPair.size() / 2; ++i)
 			{
 				CHtmlhref href0;
-				href0.name= strListPair[2 * i].toDouble();
-				href0.href= strListPair[2 * i + 1].toDouble();
+				href0.name= strListPair[2 * i];
+				href0.href= strListPair[2 * i + 1];
 
 				m_lsthref.append(href0);
 			}
@@ -284,24 +245,25 @@ bool CHtmlNode::_parse()
 		if (m_Title.size()<m_lsthref[i].name.size())
 		{
 			m_Title = m_lsthref[i].name;
+			m_Href = m_lsthref[i].href;
 		}
 	}
 	return true;
 }
 
-class CHtml :public CBaseObject
+
+CHtmlNode* CHtml::GetHtmlNode(QString url)
 {
-public:
-	CHtml(QUuid uuid=0);
-
-	QString m_href;
-	QString m_host;
-
-	virtual QString GetObjectType() { return "CHtml"; }
-	bool parse(QString strText);
-	bool Serialize(bool bSave);
-};
-
+	for (int i = 0; i < m_lstChildren.count(); i++)
+	{
+		CHtmlNode* p = dynamic_cast<CHtmlNode*>(m_lstChildren[i]);
+		if (p && p->m_Href == url)
+		{
+			return p;
+		}
+	}
+	return NULL;
+}
 CHtml::CHtml(QUuid uuid):CBaseObject(uuid)
 {
 
@@ -336,7 +298,7 @@ bool CHtml::Serialize(bool bSave)
 
 		if (query.first())
 		{
-			int nIndex = -1;
+			int nIndex = 0;
 
 			m_href = query.value(++nIndex).toString();
 			m_host = query.value(++nIndex).toString();
@@ -348,11 +310,6 @@ bool CHtml::Serialize(bool bSave)
 bool CHtml::parse(QString strText)
 {
 	int i;
-	for (i = 0; i < m_lstChildren.count(); i++)
-	{
-		delete m_lstChildren[i];
-	}
-	m_lstChildren.clear();
 
 	QStringList lstTBody = strText.split("<tbody", QString::KeepEmptyParts, Qt::CaseInsensitive);
 	lstTBody.removeFirst();
@@ -362,7 +319,21 @@ bool CHtml::parse(QString strText)
 		if (lstText.count()>0)
 		{
 			CHtmlNode* pNode = new CHtmlNode(lstText.first());
-			m_lstChildren.append(pNode);
+			if (pNode->m_Title.isEmpty())
+			{
+				delete pNode;
+				continue;
+			}
+			CHtmlNode* pFind = GetHtmlNode(pNode->m_Href);
+			if (pFind)
+			{
+				pFind->m_lsthref = pNode->m_lsthref;
+				delete pNode;
+			}
+			else
+			{
+				m_lstChildren.append(pNode);
+			}
 		}
 	}
 	return true;
@@ -370,20 +341,6 @@ bool CHtml::parse(QString strText)
 
 
 
-class CHtmlProject :public CBaseObject
-{
-public:
-	CHtmlProject(QUuid uuid = 0);
-	bool Load();
-	bool Save();
-	
-	CHtml* GetorCreateHtml(QString url);
-
-	virtual QString GetObjectType() { return "CHtmlProject"; }
-	bool Serialize(bool bSave);
-
-	static CHtmlProject* ____p;
-};
 
 void RecreateProject()
 {
@@ -404,6 +361,7 @@ CHtmlProject* CHtmlProject::____p =NULL;
 CHtmlProject::CHtmlProject(QUuid uuid) :CBaseObject(uuid)
 {
 	CMyDBIO::GetDBIO();
+	manager = new DownloadManager();
 }
 
 bool CHtmlProject::Serialize(bool bSave)
@@ -499,6 +457,7 @@ bool CHtmlProject::Save()
 
 	QStack<CBaseObject*> stack;
 	stack.push(this);
+	
 
 	while (!stack.empty())
 	{
@@ -519,6 +478,123 @@ bool CHtmlProject::Save()
 	return true;
 }
 
+void CHtmlProject::startDown(QList<MyHrefCount> lstData)
+{
+	m_mapRealHerfOrihref.clear();
+	QStringList lstHref;
+	int i;
+	for ( i = 0; i < lstData.count(); i++)
+	{
+		if (lstData[i].href.contains("%x%"))
+		{
+			for (int j = 0; j < lstData[i].count; j++)
+			{
+				QString str = lstData[i].href;
+				str = str.replace("%x%", QString::number(j + 1));
+				lstHref.append(str);
+				m_mapRealHerfOrihref[str] = lstData[i].href;
+			}
+		}
+		else
+		{
+			lstHref.append(lstData[i].href);
+		}
+	}
+
+
+	manager->append(lstHref);
+	QTimer::singleShot(0, manager, SLOT(startNextDownload()));
+	//manager->startNextDownload();
+}
+bool lstrefLess(CHtmlNode* p1, CHtmlNode* p2)
+{
+	return p1->m_refCount > p2->m_refCount;
+}
+
+void CHtmlProject::outputHtmlAll(int order)//order 0Ç°ºóË³Ðò 1refcount 2 all refcount
+{
+	int j;
+	CHtmlProject* pProject = GetProject();
+
+	QString strOut;
+	switch (order)
+	{
+	case 1:
+		strOut = "byrefcount.html";
+		break;
+	case 2:
+		strOut = "allbyrefcount.html";
+
+		break;
+	default:
+		strOut = "allnormal.html";
+		//qSort(lst.begin(), lst.end(), lstCKEWellCompDataLessThan);
+		break;
+	}
+	int i;
+
+	QString strText;
+	QString strTTTTT;
+	for (  j = 0; j < pProject->m_lstChildren.count(); j++)
+	{
+		CHtml* pHtml = dynamic_cast<CHtml*>(pProject->m_lstChildren[j]);
+		if (pHtml)
+		{
+
+			strText += "-------------------------------------"+pHtml->m_href + "-------------------------------------<br>";
+
+
+			QList<CHtmlNode*> lst;
+			for (i = 0; i< pHtml->m_lstChildren.count(); i++)
+			{
+				CHtmlNode* pNode = dynamic_cast<CHtmlNode*>(pHtml->m_lstChildren[i]);
+				if (pNode)
+				{
+					lst.append(pNode);
+				}
+			}
+			if (order == 2)
+			{
+				qSort(lst.begin(), lst.end(), lstrefLess);
+			}
+			for (i = 0; i < lst.count(); i++)
+			{
+				CHtmlNode* pNode = lst[i];
+				strTTTTT += pNode->m_Title + "\n";
+				//qDebug() << pNode->m_Author;
+				//qDebug() << pNode->m_refCount;
+				//qDebug() << pNode->m_dateTime.toString();
+				strText += QString::number(pNode->m_refCount);
+				for (int j = 0; j < pNode->m_lsthref.count(); j++)
+				{
+					strText += "<a href=\"" + pHtml->m_host + pNode->m_lsthref[j].href + "\"> "
+						+ pNode->m_lsthref[j].name
+						+ " </a>";
+
+				}
+				strText += "<br>";
+			}
+		}
+	}
+	{
+
+		QFile fileOut(strOut);
+
+		fileOut.open(QFile::WriteOnly);
+		fileOut.write(strText.toUtf8());
+		fileOut.close();
+	}
+
+	{
+
+		QFile fileOut("test.txt");
+
+		fileOut.open(QFile::WriteOnly);
+		fileOut.write(strTTTTT.toUtf8());
+		fileOut.close();
+	}
+}
+
 CHtml* CHtmlProject::GetorCreateHtml(QString url)
 {
 	for (int i = 0; i < m_lstChildren.count(); i++)
@@ -534,6 +610,27 @@ CHtml* CHtmlProject::GetorCreateHtml(QString url)
 	return p;
 }
 
+
+
+void runThread::stop()
+{
+	m_bStop = true;
+}
+
+
+void runThread::run()
+{
+	m_bStop = false;
+
+
+	GetProject()->startDown(m_lstData);
+
+	while (GetProject()->manager->m_bRuning)
+	{
+		//sleep(1000);
+	}
+}
+
 DownloadManager::DownloadManager(QObject *parent)
     : QObject(parent), downloadedCount(0), totalCount(0)
 {
@@ -541,22 +638,35 @@ DownloadManager::DownloadManager(QObject *parent)
 
 void DownloadManager::append(const QStringList &urlList)
 {
+	//downloadQueue.clear();
+	m_bRuning = true;
     foreach (QString url, urlList)
-        append(QUrl::fromEncoded(url.toLocal8Bit()));
-
-    if (downloadQueue.isEmpty())
-        QTimer::singleShot(0, this, SIGNAL(finished()));
+		downloadQueue.enqueue(QUrl::fromEncoded(url.toLocal8Bit()));
+	totalCount = downloadQueue.count();
 }
+//
+//void DownloadManager::append(const QStringList &urlList)
+//{
+//	m_bRuning = true;
+//	foreach(QString url, urlList)
+//		append(QUrl::fromEncoded(url.toLocal8Bit()));
+//
+//	if (downloadQueue.isEmpty())
+//		QTimer::singleShot(0, this, SIGNAL(finished()));
+//}
+//
+//void DownloadManager::append(const QUrl &url)
+//{
+//	m_bRuning = true;
+//	if (downloadQueue.isEmpty())
+//		QTimer::singleShot(0, this, SLOT(startNextDownload()));
+//
+//	downloadQueue.enqueue(url);
+//	++totalCount;
+//}
 
-void DownloadManager::append(const QUrl &url)
-{
-    if (downloadQueue.isEmpty())
-        QTimer::singleShot(0, this, SLOT(startNextDownload()));
 
-    downloadQueue.enqueue(url);
-    ++totalCount;
-}
-
+#include <QDir>
 QString saveFileName(const QUrl &url)
 {
     QString path = url.path();
@@ -574,7 +684,12 @@ QString saveFileName(const QUrl &url)
 
     //    basename += QString::number(i);
     //}
-
+	QDir dir;
+	if (dir.exists("temp")==false)
+	{
+		dir.mkdir("temp");
+	}
+	basename = "temp/" + basename;
     return basename;
 }
 
@@ -583,6 +698,7 @@ void DownloadManager::startNextDownload()
     if (downloadQueue.isEmpty()) {
         printf("%d/%d files downloaded successfully\n", downloadedCount, totalCount);
         emit finished();
+		m_bRuning = false;
         return;
     }
 
@@ -682,10 +798,19 @@ void parseText(QString strFilename, QString url)
 
 
 	QUrl url0(url);
-	CHtml *pHtml = GetProject()->GetorCreateHtml(url);
+	QString urlOri;
+	if (GetProject()->m_mapRealHerfOrihref.contains(url) )
+	{
+		urlOri = GetProject()->m_mapRealHerfOrihref[url];
+	}
+	else
+	{
+		urlOri = url;
+	}
+	CHtml *pHtml = GetProject()->GetorCreateHtml(urlOri);
 
 	pHtml->parse(str);
-	pHtml->m_href = url;
+	pHtml->m_href = urlOri;
 	pHtml->m_host = "http://"+url0.host()+"/";
 	GetProject()->AddChild(pHtml);
 	GetProject()->Save();
@@ -709,43 +834,43 @@ void parseText(QString strFilename, QString url)
 
 
 
-	QString strText;
-	for ( i = 0; i < pHtml->m_lstChildren.count(); i++)
-	{
-		CHtmlNode* pNode = (CHtmlNode*)pHtml->m_lstChildren[i];
-		//qDebug() << pNode->m_Author;
-		//qDebug() << pNode->m_refCount;
-		//qDebug() << pNode->m_dateTime.toString();
-		strText += QString::number(pNode->m_refCount);
-		for (int j = 0; j < pNode->m_lsthref.count(); j++)
-		{
-			strText += "<a href=\"" + pHtml->m_host + pNode->m_lsthref[j].href + "\"> "
-				+ pNode->m_lsthref[j].name
-				+ " </a>";
+	//QString strText;
+	//for ( i = 0; i < pHtml->m_lstChildren.count(); i++)
+	//{
+	//	CHtmlNode* pNode = (CHtmlNode*)pHtml->m_lstChildren[i];
+	//	//qDebug() << pNode->m_Author;
+	//	//qDebug() << pNode->m_refCount;
+	//	//qDebug() << pNode->m_dateTime.toString();
+	//	strText += QString::number(pNode->m_refCount);
+	//	for (int j = 0; j < pNode->m_lsthref.count(); j++)
+	//	{
+	//		strText += "<a href=\"" + pHtml->m_host + pNode->m_lsthref[j].href + "\"> "
+	//			+ pNode->m_lsthref[j].name
+	//			+ " </a>";
 
-		}
-		strText += "<br>";
-	}
-	{
+	//	}
+	//	strText += "<br>";
+	//}
+	//{
 
-	QFile fileOut(saveFileName(url0) + "change.html");
+	//QFile fileOut(saveFileName(url0) + "change.html");
 
-	fileOut.open(QFile::WriteOnly);
-	fileOut.write(strText.toUtf8());
-	fileOut.close();
-	}
+	//fileOut.open(QFile::WriteOnly);
+	//fileOut.write(strText.toUtf8());
+	//fileOut.close();
+	//}
 
-	{
+	//{
 
-		QFile fileOut("all.html");
+	//	QFile fileOut("all.html");
 
-		fileOut.open(QFile::ReadWrite);
-		fileOut.seek(fileOut.size());
-		QString strLine = url+"-------------------------------------<br>";
-		fileOut.write(strLine.toUtf8());
-		fileOut.write(strText.toUtf8());
-		fileOut.close();
-	}
+	//	fileOut.open(QFile::ReadWrite);
+	//	fileOut.seek(fileOut.size());
+	//	QString strLine = url+"-------------------------------------<br>";
+	//	fileOut.write(strLine.toUtf8());
+	//	fileOut.write(strText.toUtf8());
+	//	fileOut.close();
+	//}
 
 }
 
