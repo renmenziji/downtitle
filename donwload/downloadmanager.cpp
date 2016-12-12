@@ -1,7 +1,7 @@
 
 
 #include "downloadmanager.h"
-
+#include <qapplication.h>
 #include <QFileInfo>
 #include <QNetworkRequest>
 #include <QNetworkReply>
@@ -10,6 +10,7 @@
 #include <QTimer>
 #include <stdio.h>
 #include <QTextCodec>
+#include <QMessageBox>
 //#include <QDomDocument>
 #include <QJsonObject>
 #include <QTimer>
@@ -104,7 +105,7 @@ CBaseObject* CBaseObject::GetObject(QUuid id)
 
 CHtmlNode::CHtmlNode(QString t, QUuid uuid ):CBaseObject(uuid)
 {
-	_text = t; m_refCount = 0; GetUniqueGuid(); _parse(); 
+	_text = t; m_refCount = 0; GetUniqueGuid();
 }
 
 
@@ -180,7 +181,7 @@ bool CHtmlNode::Serialize(bool bSave)
 }
 
 
-bool CHtmlNode::_parse()
+bool CHtmlNode::_parse(int type)
 {
 	if (_text.isEmpty())
 	{
@@ -188,98 +189,158 @@ bool CHtmlNode::_parse()
 	}
 	int i;
 	m_refCount = -1;
-	QStringList lsthref = _text.split("<a href=\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
 	//lsthref.removeFirst();
 
-	for (i = 1; i < lsthref.count(); i++)
+
+	if (type ==0)
 	{
-		CHtmlhref href0;
-		QStringList lstText = lsthref[i].split("\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
-		if (lstText.count()>0)
+
+		QStringList lsthref = _text.split("<a href=\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
+		for (i = 1; i < lsthref.count(); i++)
 		{
-			href0.href = lstText.first();
-			if (href0.href[0] == '/')
-			{
-				href0.href.remove(0, 1);
-			}
-		}
-		else
-		{
-			continue;
-		}
-		lstText = lsthref[i].split(">", QString::KeepEmptyParts, Qt::CaseInsensitive);
-		if (lstText.count()>1)
-		{
-			lstText = lstText[1].split("<", QString::KeepEmptyParts, Qt::CaseInsensitive);
+			CHtmlhref href0;
+			QStringList lstText = lsthref[i].split("\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
 			if (lstText.count()>0)
 			{
-				QString check0 = lstText.first().simplified();
+				href0.href = lstText.first();
+				if (href0.href[0] == '/')
+				{
+					href0.href.remove(0, 1);
+				}
+			}
+			else
+			{
+				continue;
+			}
+			lstText = lsthref[i].split(">", QString::KeepEmptyParts, Qt::CaseInsensitive);
+			if (lstText.count()>1)
+			{
+				lstText = lstText[1].split("<", QString::KeepEmptyParts, Qt::CaseInsensitive);
+				if (lstText.count()>0)
+				{
+					QString check0 = lstText.first().simplified();
 
-				if (check0.size()<2 )
+					if (check0.size()<2)
+					{
+						continue;
+					}
+					href0.name = lstText.first();
+				}
+				else
 				{
 					continue;
 				}
-				href0.name = lstText.first();
 			}
 			else
 			{
 				continue;
 			}
+			m_lsthref.append(href0);
+			if (lsthref[i - 1].contains("\"num\""))
+			{
+				m_refCount = href0.name.toInt();
+			}
+			if (lsthref[i].contains("</cite>"))
+			{
+				m_Author = href0.name;
+			}
+			QDateTime dt = QDateTime::fromString(href0.name);
+			if (dt != QDateTime())
+			{
+				m_dateTime = dt;
+			}
 		}
-		else
+		for (i = 0; i < m_lsthref.count(); i++)
 		{
-			continue;
-		}
-		m_lsthref.append(href0);
-		if (lsthref[i - 1].contains("\"num\""))
-		{
-			m_refCount = href0.name.toInt();
-		}
-		if (lsthref[i].contains("</cite>"))
-		{
-			m_Author = href0.name;
-		}
-		QDateTime dt = QDateTime::fromString(href0.name);
-		if (dt != QDateTime())
-		{
-			m_dateTime = dt;
+			if (m_Title.size()<m_lsthref[i].name.size())
+			{
+				m_Title = m_lsthref[i].name;
+				m_Href = m_lsthref[i].href;
+			}
 		}
 	}
-
-	if (m_refCount==-1)//没有找到回复数，可能是tianya模式
+	else if (type == 1)//tianya
 	{
+		//QString m_Title;//like tr td...
+		//QString m_Author;
+		//QString m_Href;//like tr td...
+		//QDateTime m_dateTime;
+		//int m_refCount;
+		//QList<CHtmlhref> m_lsthref;
 
-		QStringList lsthref = _text.split("<td>", QString::KeepEmptyParts, Qt::CaseInsensitive);
-		//lsthref.removeFirst();
 
-		for (i = 1; i < lsthref.count(); i++)
+		//5个<td ,2个href
+		QStringList lstTD = _text.split("<td", QString::KeepEmptyParts, Qt::CaseInsensitive);
+		for (i = 1; i < lstTD.count(); i++)
 		{
-			QStringList lstText = lsthref[i].split("</td>", QString::KeepEmptyParts, Qt::CaseInsensitive);
-			if (lstText.count()>0)
+			if (i == 1 || i == 2)
 			{
-				QString str = lstText.first();
-				bool bok;
-				int a = str.toInt(&bok);
-				if (bok)
+				CHtmlhref href0;
+				QStringList lsthref = lstTD[i].split("href=\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
+				if (lsthref.count() > 1)
 				{
-					m_refCount = a;
+					QStringList lstText = lsthref[1].split("\"", QString::KeepEmptyParts, Qt::CaseInsensitive);
+					if (lstText.count() > 0)
+					{
+						href0.href = lstText.first();
+						if (href0.href.isEmpty())
+						{
+							continue;
+						}
+						if (href0.href[0]=='/')
+						{
+							href0.href.remove(0, 1);
+						}
+					}
+					else {
+						continue;
+					}
+
+					lstText = lsthref[1].split(">", QString::KeepEmptyParts, Qt::CaseInsensitive);
+					if (lstText.count() > 1)
+					{
+						href0.name = lstText[1].split("<", QString::KeepEmptyParts, Qt::CaseInsensitive).first();
+						if (href0.name.isEmpty())
+						{
+							continue;
+						}
+					}
+					else {
+						continue;
+					}
+					m_lsthref.append(href0);
+
+					if (i == 1 )
+					{
+						m_Title = href0.name;
+						m_Href = href0.href;
+					}
+					else
+					{ 
+						m_Author = href0.name;
+					}
+				}
+
+			}
+			else if (i == 4)
+			{
+				QStringList lsthref = lstTD[i].split("<", QString::KeepEmptyParts, Qt::CaseInsensitive);
+				if (lsthref.count() > 0)
+				{
+					m_refCount = lsthref.first().remove(">").toInt();
 				}
 			}
-			else
+			else if (i == 5)
 			{
-				continue;
+				QStringList lsthref = lstTD[i].split("<", QString::KeepEmptyParts, Qt::CaseInsensitive);
+				if (lsthref.count() > 0)
+				{
+					m_dateTime.fromString( lsthref.first().remove(">"));
+				}
 			}
 		}
 	}
 
-	for (i = 0; i < m_lsthref.count(); i++)
-	{
-		if (m_Title.size()<m_lsthref[i].name.size())
-		{
-			m_Title = m_lsthref[i].name;
-			m_Href = m_lsthref[i].href;
-		}
-	}
 	return true;
 }
 
@@ -348,7 +409,7 @@ bool CHtml::parse(QString strText)
 		type = 1;
 	}
 
-	if (type== 1)//tbody中含有 class="bg" 的才有
+	if (type== 1)//tbody中
 	{
 
 		QStringList lstTBody = strText.split("<tbody", QString::KeepEmptyParts, Qt::CaseInsensitive);
@@ -358,6 +419,10 @@ bool CHtml::parse(QString strText)
 			QStringList lstTextBG = lstTBody[i].split("/tbody>", QString::KeepEmptyParts, Qt::CaseInsensitive);
 			if (lstTextBG.count()>0)//这里后剩下 tr
 			{
+				if (lstTextBG.first().contains("href")==false)//没有链接
+				{
+					continue;
+				}
 				QStringList lstTextTr = lstTextBG.first().split("<tr", QString::KeepEmptyParts, Qt::CaseInsensitive);
 				lstTextTr.removeFirst();
 				for (j = 0; j < lstTextTr.count(); j++)
@@ -367,6 +432,7 @@ bool CHtml::parse(QString strText)
 					if (lstText.count() > 0)//这里后剩下 tr
 					{
 						CHtmlNode* pNode = new CHtmlNode(lstText.first());
+						pNode->_parse(type);
 						if (pNode->m_Title.isEmpty())
 						{
 							delete pNode;
@@ -404,6 +470,7 @@ bool CHtml::parse(QString strText)
 			if (lstText.count()>0)
 			{
 				CHtmlNode* pNode = new CHtmlNode(lstText.first());
+				pNode->_parse(type);
 				if (pNode->m_Title.isEmpty())
 				{
 					delete pNode;
@@ -448,6 +515,8 @@ CHtmlProject::CHtmlProject(QUuid uuid) :CBaseObject(uuid)
 {
 	CMyDBIO::GetDBIO();
 	manager = new DownloadManager();
+	g_ProgressBar = new QProgressBar();
+	g_ProgressBar->resize(800, 100);
 }
 
 bool CHtmlProject::Serialize(bool bSave)
@@ -591,6 +660,7 @@ void CHtmlProject::startDown(QList<MyHrefCount> lstData)
 	manager->append(lstHref);
 	QTimer::singleShot(0, manager, SLOT(startNextDownload()));
 	//manager->startNextDownload();
+
 }
 bool lstrefLess(CHtmlNode* p1, CHtmlNode* p2)
 {
@@ -657,9 +727,18 @@ void CHtmlProject::outputHtmlAll(int order, int minRefCount)//order 0前后顺序 1r
 				strText += QString::number(pNode->m_refCount);
 				for (int j = 0; j < pNode->m_lsthref.count(); j++)
 				{
-					strText += "<a href=\"" + pHtml->m_host + pNode->m_lsthref[j].href + "\"> "
-						+ pNode->m_lsthref[j].name
-						+ " </a>";
+					if (pNode->m_lsthref[j].href.contains("http:"))
+					{
+						strText += "<a href=\"" +  pNode->m_lsthref[j].href + "\"> "
+							+ pNode->m_lsthref[j].name
+							+ " </a>";
+					}
+					else
+					{
+						strText += "<a href=\"" + pHtml->m_host + pNode->m_lsthref[j].href + "\"> "
+							+ pNode->m_lsthref[j].name
+							+ " </a>";
+					}
 
 				}
 				strText += "<br>";
@@ -791,6 +870,7 @@ QString saveFileName(const QUrl &url)
 void DownloadManager::startNextDownload()
 {
     if (downloadQueue.isEmpty()) {
+		//QMessageBox::warning(NULL, "finished", "finished");
         printf("%d/%d files downloaded successfully\n", downloadedCount, totalCount);
         emit finished();
 		m_bRuning = false;
@@ -799,6 +879,7 @@ void DownloadManager::startNextDownload()
 
     QUrl url = downloadQueue.dequeue();
 
+	//QMessageBox::warning(NULL, "startDown", url.toString());
 	m_strDownLoad = "";
      _filename = saveFileName(url);
     output.setFileName(_filename);
@@ -819,6 +900,8 @@ void DownloadManager::startNextDownload()
             SLOT(downloadFinished()));
     connect(currentDownload, SIGNAL(readyRead()),
             SLOT(downloadReadyRead()));
+	
+	GetProject()->g_ProgressBar->setWindowTitle(QString("Downloading %1...%2/%3 ").arg(url.toEncoded().constData()).arg(downloadedCount).arg(totalCount));
 
     // prepare the output
     printf("Downloading %s...\n", url.toEncoded().constData());

@@ -12,8 +12,10 @@
 #include <QUrl>
 #include <QNetworkAccessManager>
 #include <QJsonObject>
-
+#include <QProgressBar>
 #include "textprogressbar.h"
+
+
 
 class DOWNLOAD_EXPORT  DownloadManager : public QObject
 {
@@ -84,6 +86,7 @@ class DOWNLOAD_EXPORT CHtmlNode :public CBaseObject
 {
 public:
 	CHtmlNode(QString t, QUuid uuid = 0);
+	bool _parse(int type = 0);
 
 	QString m_Title;//like tr td...
 	QString m_Author;
@@ -97,7 +100,6 @@ public:
 	virtual QString GetObjectType() { return "CHtmlNode"; }
 private:
 	QString _text;
-	bool _parse();
 	QJsonObject _jo;
 };
 
@@ -134,6 +136,7 @@ public:
 	static CHtmlProject* ____p;
 	QMap<QString, QString> m_mapRealHerfOrihref;
 	DownloadManager *manager;
+	QProgressBar *g_ProgressBar;
 };
 
 DOWNLOAD_EXPORT void RecreateProject();

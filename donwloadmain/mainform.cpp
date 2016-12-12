@@ -3,6 +3,23 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QSharedMemory>
+#include <QProcess>
+
+
+
+int assumeSingleInstance(const char* program)
+{
+	static QSharedMemory shm(program);
+	if (shm.create(100) == false)
+	{
+	return -1;
+	}
+	return 0;
+}
+
+
+
 CMainForm::CMainForm(QWidget * parent) : QWidget(parent) {
 	ui.setupUi(this);
 
@@ -14,6 +31,8 @@ CMainForm::CMainForm(QWidget * parent) : QWidget(parent) {
 	QObject::connect(ui.pushButtonQuit, SIGNAL(clicked()), this, SLOT(slotQuit()));
 	QObject::connect(ui.pushButtonOutByCount, SIGNAL(clicked()), this, SLOT(slotOutByCount()));
 	m_nTimerId = startTimer(3600000);
+
+
 
 }
 
@@ -103,61 +122,10 @@ void  CMainForm::save()
 
 void CMainForm::slotRun()
 {
-	//if (m_runThread->isRunning())
-	//{
-	//	m_runThread->terminate();
-	//	return;
-	//}
-
-	
-	QList<MyHrefCount> lstData;
-	//QStringList lstHref;
-	//QList<int> maxCount;
-
-	int uiMaxCount = ui.lineEditMaxCount->text().toInt();
-	int i;
-	MyHrefCount h0;
-	for ( i = 0; i < ui.tableWidget->rowCount(); i++)
-	{
-		if (ui.tableWidget->item(i,0))
-		{
-			h0.href = ui.tableWidget->item(i, 0)->text();
-			if (h0.href.isEmpty())
-			{
-				continue;
-			}
-			if (uiMaxCount>=1)
-			{
-				h0.count = uiMaxCount;
-			}
-			else if (ui.tableWidget->item(i,1))
-			{
-				h0.count=(qMax(ui.tableWidget->item(i, 1)->text().toInt(),1));
-			}
-			else
-			{
-				h0.count =(1);
-			}
-			lstData.append(h0);
-		}
-	}
-
-	//m_runThread->m_lstData = lstData;
-	//m_runThread->start();
-
-	if (ui.lineEditText->text().isEmpty()==false)
-	{
-		lstData.clear();
-		h0.href = ui.lineEditText->text();
-		h0.count = uiMaxCount;
-		lstData.append(h0);
-	}
-
-	GetProject()->startDown(lstData);
-	//DownloadManager manager;
-	//manager.append(lstMe);
-
-	//QObject::connect(&manager, SIGNAL(finished()), &app, SLOT(quit()));
+	save();
+	QProcess *process = new QProcess();
+	//process.setWorkingDirectory(strTempPath);
+	process->start("donwloadthread.exe");
 }
 void CMainForm::slotQuit()
 {
@@ -167,11 +135,26 @@ void CMainForm::slotQuit()
 }
 void CMainForm::slotOutByCount()
 {
-	GetProject()->outputHtmlAll(2,ui.lineEditMinCount->text().toInt());
+	save();
+	QProcess *process = new QProcess();
+
+	QStringList args;
+	args.append("2");
+	args.append(QString::number(ui.lineEditMinCount->text().toInt()));
+	//process.setWorkingDirectory(strTempPath);
+	process->start("donwloadthread.exe",args);
+	//GetProject()->outputHtmlAll(2,ui.lineEditMinCount->text().toInt());
 }
 
 void CMainForm::timerEvent(QTimerEvent * event)
 {
 	qDebug("timer event, id %d", event->timerId());
 	slotRun();
+
+
+	// 应用程序单例检查  
+	if (assumeSingleInstance("download.lock") < 0)
+	{
+		return;
+	}
 }

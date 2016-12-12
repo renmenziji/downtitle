@@ -6,8 +6,15 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "downloadmanager", "donwload\downloadmanager.vcxproj", "{9796896C-4584-389C-B816-007A3DEFE58F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "downloadmain", "donwloadmain\downloadmain.vcxproj", "{6CACCBD1-DFFB-4761-B6F4-44EBA7EC959B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9796896C-4584-389C-B816-007A3DEFE58F} = {9796896C-4584-389C-B816-007A3DEFE58F}
+		{F93C86BE-8CC1-4C66-8F0D-584B17F49334} = {F93C86BE-8CC1-4C66-8F0D-584B17F49334}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "donwloadthread", "donwloadthread\donwloadthread.vcxproj", "{F93C86BE-8CC1-4C66-8F0D-584B17F49334}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9796896C-4584-389C-B816-007A3DEFE58F} = {9796896C-4584-389C-B816-007A3DEFE58F}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

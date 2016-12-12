@@ -1,0 +1,39 @@
+{
+    "ja": [
+        {
+            "count": 10,
+            "href": "http://www.1080.net/forum-2-%x%.html"
+        },
+        {
+            "count": 10,
+            "href": "http://bbs.a9vg.com/forum-261-%x%.html"
+        },
+        {
+            "count": 10,
+            "href": "http://bbs.popiano.org/forum-133-%x%.html"
+        },
+        {
+            "count": 1,
+            "href": "http://bbs.tianya.cn/list-develop-1.shtml"
+        },
+        {
+            "count": 1,
+            "href": "http://bbs.tianya.cn/list-enterprise-1.shtml"
+        },
+        {
+            "count": 1,
+            "href": "http://bbs.tianya.cn/list-stocks-1.shtml"
+        },
+        {
+            "count": 1,
+            "href": "http://bbs.tianya.cn/list-no20-1.shtml"
+        },
+        {
+            "count": 1,
+            "href": "http://bbs.tianya.cn/list-free-1.shtml"
+        }
+    ],
+    "jsontype": "CMainForm",
+    "lineEditMaxCount": 3,
+    "lineEditMinCount": 100
+}
