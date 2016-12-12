@@ -3,6 +3,7 @@
 #ifndef DOWNLOADMANAGER_H
 #define DOWNLOADMANAGER_H
 
+#include "build_download.h"
 #include <QFile>
 #include <QObject>
 #include <QQueue>
@@ -13,10 +14,42 @@
 #include <QJsonObject>
 
 #include "textprogressbar.h"
-#include "mainform.hpp"
 
-class DownloadManager;
-class CBaseObject
+class DOWNLOAD_EXPORT  DownloadManager : public QObject
+{
+	Q_OBJECT
+public:
+	DownloadManager(QObject *parent = 0);
+
+	void append(const QStringList &urlList);
+	// QString saveFileName(const QUrl &url);
+
+	bool m_bRuning;
+signals:
+	void finished();
+
+	public slots:
+	void startNextDownload();
+	void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
+	void downloadFinished();
+	void downloadReadyRead();
+
+private:
+	QNetworkAccessManager manager;
+	QQueue<QUrl> downloadQueue;
+	QNetworkReply *currentDownload;
+	QFile output;
+	QString m_strDownLoad;
+	QTime downloadTime;
+	TextProgressBar progressBar;
+	QString _filename;
+
+	int downloadedCount;
+	int totalCount;
+};
+
+
+class DOWNLOAD_EXPORT CBaseObject
 {
 public:
 	CBaseObject(QUuid uuid);
@@ -36,12 +69,18 @@ public:
 };
 
 
-struct CHtmlhref
+struct DOWNLOAD_EXPORT MyHrefCount
+{
+	QString href;
+	int count;
+};
+
+struct DOWNLOAD_EXPORT CHtmlhref
 {
 	QString name;
 	QString href;
 };
-class CHtmlNode :public CBaseObject
+class DOWNLOAD_EXPORT CHtmlNode :public CBaseObject
 {
 public:
 	CHtmlNode(QString t, QUuid uuid = 0);
@@ -62,7 +101,7 @@ private:
 	QJsonObject _jo;
 };
 
-class CHtml :public CBaseObject
+class  DOWNLOAD_EXPORT CHtml :public CBaseObject
 {
 public:
 	CHtml(QUuid uuid = 0);
@@ -76,7 +115,7 @@ public:
 	bool Serialize(bool bSave);
 };
 
-class CHtmlProject :public CBaseObject
+class DOWNLOAD_EXPORT  CHtmlProject :public CBaseObject
 {
 public:
 	CHtmlProject(QUuid uuid = 0);
@@ -97,57 +136,24 @@ public:
 	DownloadManager *manager;
 };
 
-void RecreateProject();
-CHtmlProject* GetProject();
+DOWNLOAD_EXPORT void RecreateProject();
+DOWNLOAD_EXPORT CHtmlProject* GetProject();
 
 #include <qthread.h>
-class runThread:public QThread
+class DOWNLOAD_EXPORT  runThread:public QThread
 {
-	Q_OBJECT
+	//Q_OBJECT
 public :
 	runThread() { m_bStop = false; }
 	void stop();
 	void run();
 	QList<MyHrefCount> m_lstData;
-signals:
-	void sigRunIndex(int);
+//signals:
+//	void sigRunIndex(int);
 
 private:
 	bool m_bStop;
 };
 
-
-class DownloadManager: public QObject
-{
-    Q_OBJECT
-public:
-    DownloadManager(QObject *parent = 0);
-
-    void append(const QStringList &urlList);
-   // QString saveFileName(const QUrl &url);
-
-	bool m_bRuning;
-signals:
-    void finished();
-
-public slots:
-    void startNextDownload();
-    void downloadProgress(qint64 bytesReceived, qint64 bytesTotal);
-    void downloadFinished();
-    void downloadReadyRead();
-
-private:
-    QNetworkAccessManager manager;
-    QQueue<QUrl> downloadQueue;
-    QNetworkReply *currentDownload;
-    QFile output;
-	QString m_strDownLoad;
-    QTime downloadTime;
-    TextProgressBar progressBar;
-	QString _filename;
-
-    int downloadedCount;
-    int totalCount;
-};
 
 #endif

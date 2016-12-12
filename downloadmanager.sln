@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "downloadmanager", "downloadmanager.vcxproj", "{9796896C-4584-389C-B816-007A3DEFE58F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "downloadmanager", "donwload\downloadmanager.vcxproj", "{9796896C-4584-389C-B816-007A3DEFE58F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "downloadmain", "donwloadmain\downloadmain.vcxproj", "{6CACCBD1-DFFB-4761-B6F4-44EBA7EC959B}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "donwloadthread", "donwloadthread\donwloadthread.vcxproj", "{F93C86BE-8CC1-4C66-8F0D-584B17F49334}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{9796896C-4584-389C-B816-007A3DEFE58F}.Debug|x64.Build.0 = Debug|x64
 		{9796896C-4584-389C-B816-007A3DEFE58F}.Release|x64.ActiveCfg = Release|x64
 		{9796896C-4584-389C-B816-007A3DEFE58F}.Release|x64.Build.0 = Release|x64
+		{6CACCBD1-DFFB-4761-B6F4-44EBA7EC959B}.Debug|x64.ActiveCfg = Debug|x64
+		{6CACCBD1-DFFB-4761-B6F4-44EBA7EC959B}.Debug|x64.Build.0 = Debug|x64
+		{6CACCBD1-DFFB-4761-B6F4-44EBA7EC959B}.Release|x64.ActiveCfg = Release|x64
+		{6CACCBD1-DFFB-4761-B6F4-44EBA7EC959B}.Release|x64.Build.0 = Release|x64
+		{F93C86BE-8CC1-4C66-8F0D-584B17F49334}.Debug|x64.ActiveCfg = Debug|x64
+		{F93C86BE-8CC1-4C66-8F0D-584B17F49334}.Debug|x64.Build.0 = Debug|x64
+		{F93C86BE-8CC1-4C66-8F0D-584B17F49334}.Release|x64.ActiveCfg = Release|x64
+		{F93C86BE-8CC1-4C66-8F0D-584B17F49334}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

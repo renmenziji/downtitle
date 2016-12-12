@@ -1,11 +1,6 @@
 ﻿#pragma once
 #include <QWidget>
 #include "ui_mainform.h"
-struct MyHrefCount
-{
-	QString href;
-	int count;
-};
 
 class runThread;
 class CMainForm : public QWidget {
@@ -16,7 +11,7 @@ public:
 	~CMainForm();
 
 	Ui::CMainForm ui;
-	runThread *m_runThread;
+	//runThread *m_runThread;
 
 	void load();
 	void save();

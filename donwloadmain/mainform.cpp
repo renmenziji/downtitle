@@ -9,11 +9,12 @@ CMainForm::CMainForm(QWidget * parent) : QWidget(parent) {
 	load();
 	//ui.tableWidget->setRowCount(200);
 
-	m_runThread = new runThread();
+	//m_runThread = new runThread();
 	QObject::connect(ui.pushButtonRun, SIGNAL(clicked()), this, SLOT(slotRun()));
 	QObject::connect(ui.pushButtonQuit, SIGNAL(clicked()), this, SLOT(slotQuit()));
 	QObject::connect(ui.pushButtonOutByCount, SIGNAL(clicked()), this, SLOT(slotOutByCount()));
 	m_nTimerId = startTimer(3600000);
+
 }
 
 CMainForm::~CMainForm() {
@@ -102,11 +103,11 @@ void  CMainForm::save()
 
 void CMainForm::slotRun()
 {
-	if (m_runThread->isRunning())
-	{
-		m_runThread->terminate();
-		return;
-	}
+	//if (m_runThread->isRunning())
+	//{
+	//	m_runThread->terminate();
+	//	return;
+	//}
 
 	
 	QList<MyHrefCount> lstData;

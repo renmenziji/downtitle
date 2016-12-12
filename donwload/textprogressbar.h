@@ -5,7 +5,8 @@
 
 #include <QString>
 
-class TextProgressBar
+#include "build_download.h"
+class DOWNLOAD_EXPORT TextProgressBar
 {
 public:
     TextProgressBar();

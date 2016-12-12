@@ -6,9 +6,10 @@
 #include <qsqlquery.h>
 #include <QUuid>
 
+#include "build_download.h"
 class QSqlDatabase;
 
-class  CMyDBIO
+class DOWNLOAD_EXPORT  CMyDBIO
 {
 public:
 	CMyDBIO();
